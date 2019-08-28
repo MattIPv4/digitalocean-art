@@ -29,19 +29,8 @@ function setup() {
         redraw();
     });
 
-    // Ability to save as PNG
-    const btnPng = createButton('Save an PNG');
-    btnPng.mousePressed(() => {
-        const cv = createGraphics(width, height);
-        console.log(getDataURL());
-        loadImage(getDataURL(), img => {
-            cv.image(img, 0, 0);
-            cv.save('header.png');
-        })
-    });
-
     // Ability to save as SVG
-    const btnSvg = createButton('Save an SVG');
+    const btnSvg = createButton('Save as SVG');
     btnSvg.mousePressed(() => {
         // Get SVG source
         const svg = canvas.svg;
@@ -66,6 +55,17 @@ function setup() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    });
+
+    // Ability to save as PNG
+    const btnPng = createButton('Save as PNG');
+    btnPng.mousePressed(() => {
+        const cv = createGraphics(width, height);
+        console.log(getDataURL());
+        loadImage(getDataURL(), img => {
+            cv.image(img, 0, 0);
+            cv.save('header.png');
+        })
     });
 }
 

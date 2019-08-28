@@ -1,0 +1,17 @@
+div {
+    display: block !important;
+}
+
+button {
+    color: #fff;
+    background-color: #1857bf;
+    font-weight: 600;
+    padding: 8px 13px;
+    margin: 15px 10px 0 0;
+    font-size: 15px;
+    border-radius: 3px;
+    display: inline-block;
+    border: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
