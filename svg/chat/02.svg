@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="318px" height="205px" viewBox="0 0 318 205" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+    <title>chat-02</title>
+    <desc>Created with Sketch.</desc>
+    <g id="chat-02-outer" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="chat-02-inner" fill="#000000" fill-rule="nonzero">
+            <rect id="Rectangle" x="0.4201" y="2.84217094e-14" width="317.537" height="204.382" rx="34"></rect>
+            <path d="M0.4201,34 C0.4201,15.222 15.642,2.84217094e-14 34.42,2.84217094e-14 L283.957,2.84217094e-14 C302.735,2.84217094e-14 317.957,15.222 317.957,34 L317.957,174.148 C317.957,196.051 293.25,208.839 275.367,196.192 L178.82,127.916 C167.055,119.595 151.322,119.595 139.557,127.916 L43.01,196.192 C25.127,208.839 0.4201,196.05 0.4201,174.148 L0.4201,34 Z" id="Path"></path>
+            <path d="M15.344,44.835 C-4.1778,31.535 5.2349,1 28.857,1 L290.106,1 C313.731,1 323.141,31.542 303.613,44.838 L162.254,141.084 C160.556,142.24 158.323,142.24 156.625,141.083 L15.344,44.835 Z" id="Path"></path>
+        </g>
+    </g>
+</svg>

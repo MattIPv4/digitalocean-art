@@ -1,6 +1,6 @@
 div.p5Canvas {
     display: block !important;
-    border: 1px #000 solid;
+    box-shadow: 0 0 1000px 0 #000;
 }
 
 button {

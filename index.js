@@ -1,4 +1,4 @@
-let backgroundColor;
+let backgroundColor, forceTopBottom;
 
 function randomBlue() {
     // All the DO blues
@@ -63,6 +63,19 @@ function setup() {
     // Ability to regenerate
     const btnNew = createButton('Generate New');
     btnNew.mousePressed(() => {
+        forceTopBottom = undefined;
+        clear();
+        redraw();
+    });
+    const btnNewTop = createButton('Generate New (Top of Ocean)');
+    btnNewTop.mousePressed(() => {
+        forceTopBottom = true;
+        clear();
+        redraw();
+    });
+    const btnNewBottom = createButton('Generate New (Bottom of Ocean)');
+    btnNewBottom.mousePressed(() => {
+        forceTopBottom = false;
         clear();
         redraw();
     });
@@ -105,6 +118,31 @@ function setup() {
             cv.save('header.png');
         })
     });
+
+    // Notes
+    createP(`Items by ocean type:
+    <br/>
+    <br/>
+    <b>Everywhere</b>
+    <ul>
+        <li>Small waves</li>
+        <li>Fish</li>
+        <li>Jellyfish</li>
+        <li>Floating junk (chat icons, wheels, life rings)</li>
+    </ul>
+    <b>Top of the ocean</b>
+    <ul>
+        <li>Big waves</li>
+    </ul>
+    <br/>
+    <b>Bottom of the ocean</b>
+    <ul>
+        <li>Bubbles</li>
+        <li>Buried wheels</li>
+        <li>Crabs</li>
+        <li>Plants</li>
+        <li>Vertical waves (Heat waves, sea grass, seaweed -- you decide)</li>
+    </ul>`);
 }
 
 function draw() {
@@ -112,16 +150,13 @@ function draw() {
     setBackground('#fff');
 
     // Top/bottom of ocean
-    const top = random([true, false]);
+    const top = forceTopBottom !== undefined ? forceTopBottom : randomBool();
 
     // SVGs
     new SVGs().create(top);
 
-    // Waves
-    const waves = new Waves();
-
     // Horizontal waves
-    waves.createAllHorizontal(top);
+    new Waves().createAllHorizontal(top);
 
     // Vertical columns
     if (!top) {
@@ -135,7 +170,7 @@ function draw() {
             }
         });
         new Bubbles().create(5, bubbleOrder);
-        waves.createAllVertical(5, waveOrder);
+        new Waves().createAllVertical(5, waveOrder);
     }
 
     // Ink noise
@@ -256,7 +291,7 @@ class SVGs {
     }
 
     chat() {
-        return this.assets('chat', 1);
+        return this.assets('chat', 2);
     }
 
     rings() {
@@ -269,7 +304,7 @@ class SVGs {
         items = shuffle(items);
         let size;
 
-        // Left
+        // Left 1/2
         size = height * random(0.1, 0.3);
         this.draw(
             items.pop(),
@@ -280,7 +315,7 @@ class SVGs {
             random(0, height - size)
         );
 
-        // Middle
+        // Middle 1/2
         size = height * random(0.1, 0.3);
         this.draw(
             items.pop(),
@@ -291,7 +326,7 @@ class SVGs {
             random(0, height - size)
         );
 
-        // Right
+        // Right 1/2
         size = height * random(0.1, 0.3);
         this.draw(
             items.pop(),
@@ -308,6 +343,59 @@ class SVGs {
     }
 
     createFish() {
+        const thisClass = this;
+        const fish = this.fish();
+        const xPositions = shuffle([
+            [0, width / 2],
+            [width / 2, width]
+        ]);
+
+        shuffle([
+            function () {
+                const size = width * random(0.05, 0.1);
+                const xPosition = xPositions.pop();
+                thisClass.draw(
+                    fish.pop(),
+                    size, size,
+                    randomBlue(),
+                    random(0.1, 0.5),
+                    random(xPosition[0], xPosition[1] - size),
+                    random(0, height * (2 / 3) - size)
+                );
+            },
+            function () {
+                let size, x, y, alpha;
+                const xPosition = xPositions.pop();
+                const color = randomBlue();
+
+                size = width * random(0.05, 0.1);
+                alpha = random(0.1, 0, 5);
+                x = random(xPosition[0], xPosition[1] - size);
+                y = random(0, height * (2 / 3) - size);
+                thisClass.draw(
+                    fish.pop(),
+                    size, size,
+                    color,
+                    alpha,
+                    x,
+                    y
+                );
+
+                size += size * random(-0.2, 0.2);
+                alpha += alpha * random(-0.1, 0.1);
+                x += size * random([-1, 1]) * random(0.25, 0.75);
+                y += size / 2;
+                thisClass.draw(
+                    fish.pop(),
+                    size, size,
+                    color,
+                    alpha,
+                    x,
+                    y
+                );
+
+            }
+        ]).slice(0, random([1, 2])).forEach(item => item());
     }
 
     jellyfish() {
@@ -315,38 +403,45 @@ class SVGs {
     }
 
     createJellyfish() {
+        const thisClass = this;
+        const jellyfish = this.jellyfish();
+        randomColumns(3, randomOrder(1, 2, 3), function (start, end) {
+            const size = height * random(0.15, 0.35);
+            thisClass.draw(
+                jellyfish.pop(),
+                size, size,
+                randomBlue(),
+                random(0.3, 0.6),
+                random(start, end),
+                random(0, height * (2 / 3) - size)
+            );
+        });
     }
 
     create(top) {
         const thisClass = this;
-        let hasWheels, hasPlants;
+        let hasWheels;
 
-        shuffle([
-            function () {
-                if (randomBool() && !hasWheels && !top) {
-                    thisClass.createPlants();
-                    hasPlants = true;
-                }
-            },
-            function () {
-                if (randomBool() && !hasPlants && !top) {
-                    thisClass.createWheels();
-                    hasWheels = true;
-                }
+        if (randomBool() && !top) {
+            if (randomBool()) {
+                thisClass.createPlants();
+            } else {
+                thisClass.createWheels();
+                hasWheels = true;
             }
-        ]).forEach(item => item());
+        }
 
         if (randomBool() && !top) thisClass.createCrab();
 
         shuffle([
             function () {
-                if (randomBool()) thisClass.createJunk(!hasWheels);
+                thisClass.createJunk(!hasWheels);
             },
             function () {
-                if (randomBool()) thisClass.createFish();
+                thisClass.createFish();
             },
             function () {
-                if (randomBool()) thisClass.createJellyfish();
+                thisClass.createJellyfish();
             }
         ]).slice(0, 2).forEach(item => item());
     }
@@ -516,7 +611,7 @@ class Waves {
         const minWidth = width * 0.1;
         const maxWidth = width * 0.2;
         const waveHeight = random(height * 0.02, height * 0.03);
-        const peaks = random(4, 6);
+        const peaks = round(random(4, 6));
         const waves = round(random(2, 5));
         const xRandom = () => random(width * -0.05, width * 0.05);
         const x = random(0, width - maxWidth);
@@ -539,7 +634,7 @@ class Waves {
         const minWidth = width * 0.4;
         const maxWidth = width * 0.6;
         const waveHeight = random(height * 0.04, height * 0.08);
-        const peaks = random(2, 4);
+        const peaks = round(random(2, 4));
         const waves = round(random(2, 3));
         const xRandom = () => random(width * -0.1, width * 0.1);
         const x = random(0, width - maxWidth);
@@ -575,8 +670,8 @@ class Waves {
     createVertical(x) {
         const minHeight = height * 0.2;
         const maxHeight = height * 0.5;
-        const waveWidth = random(width * 0.005, width * 0.015);
-        const peaks = random(2, 4);
+        const waveWidth = random(width * 0.0035, width * 0.01);
+        const peaks = round(random(1, 3));
         const waves = round(random(2, 3));
         const yRandom = () => 0;
         const y = height - maxHeight;
