@@ -1,5 +1,16 @@
 let backgroundColor;
 
+function randomBlue() {
+    // All the DO blues
+    const blues = [
+        "#0080FF",
+        "#005FF8",
+        "#023AAC",
+        "#182765"
+    ];
+    return color(random(blues)).levels.slice(0, 3);
+}
+
 function hsp() {
     const [r, g, b, a] = backgroundColor.levels;
     // Thanks to https://awik.io/determine-color-bright-dark-using-javascript/
@@ -14,6 +25,10 @@ function hsp() {
 function isDark() {
     // Using the HSP value, determine whether the color is light or dark
     return hsp() <= 127.5;
+}
+
+function repeat(item, length) {
+    return Array(length).fill(item);
 }
 
 function setup() {
@@ -38,16 +53,16 @@ function setup() {
         let source = serializer.serializeToString(svg);
 
         // Add missing name spaces
-        if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+        if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
-        if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+        if (!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)) {
             source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
         }
 
         // Blob & save
         const xml = '<?xml version="1.0" standalone="no"?>\r\n';
-        var blob = new Blob([xml, source], {type: "image/svg+xml"});
+        var blob = new Blob([xml, source], { type: "image/svg+xml" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -71,7 +86,7 @@ function setup() {
 
 function draw() {
     // Create background
-    createBackground();
+    setBackground('#fff');
 
     // SVGs
     new SVGs().create();
@@ -89,18 +104,11 @@ function draw() {
     ink.smudges();
 
     // Shine gradient
-    createGradient();
+    //createGradient();
 }
 
-function createBackground() {
-    // All the DO blues
-    const blues = [
-        "#0080FF",
-        "#005FF8",
-        "#023AAC",
-        "#182765"
-    ];
-    backgroundColor = color(random(blues));
+function setBackground(color) {
+    backgroundColor = color;
     background(backgroundColor);
 }
 
@@ -131,42 +139,56 @@ function createGradient() {
 
 class SVGs {
 
-    create() {
-        // Custom SVG assets
-        let size;
+    assets(type, items) {
+        return shuffle(Array(items).fill('').map((item, i) => {
+            return `svg/${type}/${(i + 1).toString().padStart(2, '0')}.svg`;
+        }));
+    }
 
+    createChat() {
         // Small chat on the top left
-        size = height * random(0.15, 0.3);
+        const size = height * random(0.15, 0.3);
         this.draw(
-            'svg/chat-1.svg',
+            'svg/chat/01.svg',
             size, size,
-            255 * random(0.75, 1),
+            randomBlue(),
             random(0.1, 0.3),
             random(size, (width / 2) - size * 2),
             random(size, (height / 2) - size * 2)
         );
+    }
 
-        const wheels = shuffle(['wheel-1', 'wheel-2', 'wheel-3']);
+    wheels() {
+        return this.assets('wheels', 3);
+    }
 
+    createWheels() {
         // Big "ghost" wheel on the right
-        size = height * random(5 / 6, 5 / 3);
+        const size = height * random(5 / 6, 5 / 3);
         this.draw(
-            `svg/${wheels.pop()}.svg`,
+            this.wheels().pop(),
             size, size,
-            255 * (isDark() ? random(0.5, 1) : random(0, 0.5)),
+            randomBlue(),
             random(0.05, 0.1),
             random(width / 2, width - (size * (2 / 3))), // Allow 1/3 to clip right
             random(0, height - (size * (2 / 3))) // Allow 1/3 to clip bottom
         );
+    }
 
-        const items = shuffle(['life-ring-1', 'life-ring-2', ...wheels]);
+    rings() {
+        return this.assets('rings', 2);
+    }
+
+    createItems() {
+        const items = shuffle([...this.wheels(), ...this.rings()]);
+        let size;
 
         // Small item on the bottom left
         size = height * random(0.15, 0.5);
         this.draw(
-            `svg/${items.pop()}.svg`,
+            items.pop(),
             size, size,
-            255 * random(isDark() ? 0.5 : 0.75, 1),
+            randomBlue(),
             random(0.1, 0.3),
             random(0, (width / 2) - size),
             random(height / 2, height - size)
@@ -175,13 +197,19 @@ class SVGs {
         // Small item on the right
         size = height * random(0.1, 0.3);
         this.draw(
-            `svg/${items.pop()}.svg`,
+            items.pop(),
             size, size,
-            255 * random(isDark() ? 0.5 : 0.75, 1),
+            randomBlue(),
             random(0.1, 0.3),
             random(width / 2, width - size),
             random(0, height - size)
         );
+    }
+
+    create() {
+        this.createChat();
+        this.createWheels();
+        this.createItems();
     }
 
     draw(path, width, height, color, alpha, x, y) {
@@ -193,12 +221,12 @@ class SVGs {
             // Color
             let g = svg.elt;
             while (g.querySelector('g')) g = g.querySelector('g');
-            if (g.hasAttribute('fill')) g.setAttribute('fill', `rgba(${color}, ${color}, ${color}, ${alpha})`);
-            if (g.hasAttribute('stroke')) g.setAttribute('stroke', `rgba(${color}, ${color}, ${color}, ${alpha})`);
+            if (g.hasAttribute('fill')) g.setAttribute('fill', `rgba(${color.join(', ')}, ${alpha})`);
+            if (g.hasAttribute('stroke')) g.setAttribute('stroke', `rgba(${color.join(', ')}, ${alpha})`);
 
             // Render
             image(svg, x, y, width, height, x, y, width, height);
-            // TODO: It'd be cool if we can render these but currently that breaks positions with stacking
+            // TODO: It'd be cool if we can rotate these but currently that breaks positions with stacking
             // TODO: Maybe use createGraphics at same size as the main and rotate in that to avoid the stacking issues?
         });
     }
@@ -209,7 +237,7 @@ class Ink {
     dots() {
         const dots = round(random(10, 30));
         for (let i = 0; i < dots; i++) {
-            const color = 255 * random([0.2, 0.8]); // Dark grey or light grey
+            const color = 255 * random(0.1, 0.5);
             this.dot(
                 random() * width,
                 random() * height,
@@ -299,7 +327,7 @@ class Bubbles {
                 [5, 10],
                 [35, 50]
             ]
-        ]
+        ];
 
         for (let i = 0; i < maxColumns; i++) {
             if (order[i]) {
@@ -319,11 +347,11 @@ class Bubbles {
 
     draw(count, minSize, maxSize, xStart) {
         // Draw setup
-        const color = 255 * random(0.7, 1);
-        const weight = max(1, random(0.5, 1.5)); // Bias towards 1
+        const color = randomBlue();
+        const weight = random(1, 1.5);
         smooth();
         noFill();
-        stroke(color, color, color, random(0.7, 1));
+        stroke(...color, 1);
         strokeWeight(weight);
 
         // Make bubbles
@@ -331,7 +359,7 @@ class Bubbles {
         let lastSize = maxSize;
         let lastY = maxSize * random(0.5, 0.7);
         for (let i = 0; i < count; i++) {
-            fill(color, color, color, max(0, random(-1, 0.2))); // Heavy bias towards 0
+            noFill();
             const bubblesLeft = count - i;
             const allocatedDelta = (lastSize - minSize) / bubblesLeft;
             lastSize -= random(allocatedDelta * 0.75, allocatedDelta);
