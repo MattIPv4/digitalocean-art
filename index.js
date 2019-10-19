@@ -11,6 +11,29 @@ function randomBlue() {
     return color(random(blues)).levels.slice(0, 3);
 }
 
+function randomWeight() {
+    return random(1.5, 2);
+}
+
+function randomOrder(minColumns, maxColumns, totalColumns) {
+    const columns = round(random(minColumns, maxColumns));
+    return shuffle(('1'.repeat(columns) + '0'.repeat(totalColumns - columns)).split('').map(i => parseInt(i)));
+}
+
+function randomColumns(columns, order, callback) {
+    for (let i = 0; i < columns; i++) {
+        if (order[i]) {
+            const start = width * (i * (1 / (columns + 1)));
+            const end = width * ((i + 1) * (1 / (columns + 1)));
+            callback(start, end);
+        }
+    }
+}
+
+function randomBool() {
+    return round(random()) === 0;
+}
+
 function hsp() {
     const [r, g, b, a] = backgroundColor.levels;
     // Thanks to https://awik.io/determine-color-bright-dark-using-javascript/
@@ -34,7 +57,7 @@ function repeat(item, length) {
 function setup() {
     // Base canvas
     colorMode(RGB, 255, 255, 255, 1);
-    const canvas = createCanvas(1500, 500, SVG);
+    const canvas = createCanvas(1600, 400, SVG);
     noLoop();
 
     // Ability to regenerate
@@ -88,20 +111,38 @@ function draw() {
     // Create background
     setBackground('#fff');
 
+    // Top/bottom of ocean
+    const top = random([true, false]);
+
     // SVGs
-    new SVGs().create();
+    new SVGs().create(top);
 
     // Waves
-    new Waves().create();
+    const waves = new Waves();
 
-    // Bubbles
-    new Bubbles().create();
+    // Horizontal waves
+    waves.createAllHorizontal(top);
+
+    // Vertical columns
+    if (!top) {
+        const order = randomOrder(2, 4, 5);
+        const bubbleOrder = Array(5).fill(0);
+        const waveOrder = Array(5).fill(0);
+        order.forEach((val, i) => {
+            if (val) {
+                if (randomBool()) bubbleOrder[i] = 1;
+                else waveOrder[i] = 1;
+            }
+        });
+        new Bubbles().create(5, bubbleOrder);
+        waves.createAllVertical(5, waveOrder);
+    }
 
     // Ink noise
-    const ink = new Ink();
-    ink.dots();
-    ink.blotches();
-    ink.smudges();
+    //const ink = new Ink();
+    //ink.dots();
+    //ink.blotches();
+    //ink.smudges();
 
     // Shine gradient
     //createGradient();
@@ -145,71 +186,169 @@ class SVGs {
         }));
     }
 
-    createChat() {
-        // Small chat on the top left
-        const size = height * random(0.15, 0.3);
-        this.draw(
-            'svg/chat/01.svg',
-            size, size,
-            randomBlue(),
-            random(0.1, 0.3),
-            random(size, (width / 2) - size * 2),
-            random(size, (height / 2) - size * 2)
-        );
-    }
-
     wheels() {
         return this.assets('wheels', 3);
     }
 
     createWheels() {
+        const wheels = this.wheels();
+        let size;
+
         // Big "ghost" wheel on the right
-        const size = height * random(5 / 6, 5 / 3);
+        size = height * random(0.9, 1.6);
+        let x;
+        if (randomBool()) x = random(-size * (1 / 3), width * (1 / 3) - size); // Allow 1/3 to clip left
+        else x = random(width * (2 / 3), width - (size * (2 / 3))); // Allow 1/3 to clip right
         this.draw(
-            this.wheels().pop(),
+            wheels.pop(),
             size, size,
             randomBlue(),
             random(0.05, 0.1),
-            random(width / 2, width - (size * (2 / 3))), // Allow 1/3 to clip right
+            x,
             random(0, height - (size * (2 / 3))) // Allow 1/3 to clip bottom
         );
+
+        // Small "buried" wheel on the bottom
+        size = height * random(0.15, 0.5);
+        this.draw(
+            wheels.pop(),
+            size, size,
+            randomBlue(),
+            random(0.2, 0.4),
+            random(0, width - size),
+            random(height - (size * (2 / 3)), height - (size * (1 / 3))) // Allow 1/3 - 2/3 to clip bottom
+        );
+    }
+
+    plants() {
+        return this.assets('plants', 2);
+    }
+
+    createPlants() {
+        const thisClass = this;
+        randomColumns(4, randomOrder(1, 3, 4), function (start, end) {
+            const size = height * random(0.15, 0.3);
+            thisClass.draw(
+                thisClass.plants().pop(),
+                size, size,
+                randomBlue(),
+                random(0.4, 0.8),
+                random(start, end),
+                height - size
+            );
+        });
+    }
+
+    crabs() {
+        return this.assets('crabs', 1);
+    }
+
+    createCrab() {
+        const size = height * random(0.2, 0.35);
+        this.draw(
+            this.crabs().pop(),
+            size, size,
+            randomBlue(),
+            random(0.8, 1),
+            random(0, width - size),
+            height - size
+        );
+    }
+
+    chat() {
+        return this.assets('chat', 1);
     }
 
     rings() {
         return this.assets('rings', 2);
     }
 
-    createItems() {
-        const items = shuffle([...this.wheels(), ...this.rings()]);
+    createJunk(useWheels) {
+        let items = [...this.chat(), ...this.rings()];
+        if (useWheels) items.push(...this.wheels());
+        items = shuffle(items);
         let size;
 
-        // Small item on the bottom left
-        size = height * random(0.15, 0.5);
-        this.draw(
-            items.pop(),
-            size, size,
-            randomBlue(),
-            random(0.1, 0.3),
-            random(0, (width / 2) - size),
-            random(height / 2, height - size)
-        );
-
-        // Small item on the right
+        // Left
         size = height * random(0.1, 0.3);
         this.draw(
             items.pop(),
             size, size,
             randomBlue(),
-            random(0.1, 0.3),
+            random(0.1, 0.5),
+            random(0, width / 2 - size),
+            random(0, height - size)
+        );
+
+        // Middle
+        size = height * random(0.1, 0.3);
+        this.draw(
+            items.pop(),
+            size, size,
+            randomBlue(),
+            random(0.1, 0.5),
+            random(width * (1 / 4), width * (3 / 4) - size),
+            random(0, height - size)
+        );
+
+        // Right
+        size = height * random(0.1, 0.3);
+        this.draw(
+            items.pop(),
+            size, size,
+            randomBlue(),
+            random(0.1, 0.5),
             random(width / 2, width - size),
             random(0, height - size)
         );
     }
 
-    create() {
-        this.createChat();
-        this.createWheels();
-        this.createItems();
+    fish() {
+        return this.assets('fish', 3);
+    }
+
+    createFish() {
+    }
+
+    jellyfish() {
+        return this.assets('jellyfish', 3);
+    }
+
+    createJellyfish() {
+    }
+
+    create(top) {
+        const thisClass = this;
+        let hasWheels, hasPlants;
+
+        shuffle([
+            function () {
+                if (randomBool() && !hasWheels && !top) {
+                    thisClass.createPlants();
+                    hasPlants = true;
+                }
+            },
+            function () {
+                if (randomBool() && !hasPlants && !top) {
+                    thisClass.createWheels();
+                    hasWheels = true;
+                }
+            }
+        ]).forEach(item => item());
+
+        if (randomBool() && !top) thisClass.createCrab();
+
+        shuffle([
+            function () {
+                if (randomBool()) thisClass.createJunk(!hasWheels);
+            },
+            function () {
+                if (randomBool()) thisClass.createFish();
+            },
+            function () {
+                if (randomBool()) thisClass.createJellyfish();
+            }
+        ]).slice(0, 2).forEach(item => item());
     }
 
     draw(path, width, height, color, alpha, x, y) {
@@ -309,62 +448,56 @@ class Ink {
 
 class Bubbles {
 
-    create() {
-        const maxColumns = 4;
-        const columns = round(random(maxColumns / 2, maxColumns));
-        const order = shuffle(('1'.repeat(columns) + '0'.repeat(maxColumns - columns)).split('').map(i => parseInt(i)));
+    create(columns, order) {
         const counts = [
-            [2, 5],
-            [3, 6],
-            [4, 8]
+            [1, 3],
+            [1, 4],
+            [2, 3],
+            [3, 5]
         ];
         const sizes = [
             [
-                [5, 10],
-                [25, 40]
-            ],
-            [
-                [5, 10],
-                [35, 50]
+                [10, 15],
+                [35, 40]
             ]
         ];
 
-        for (let i = 0; i < maxColumns; i++) {
-            if (order[i]) {
-                const count = random(counts);
-                const size = random(sizes);
-                const start = width * (i * (1 / (maxColumns + 1)));
-                const end = width * ((i + 1) * (1 / (maxColumns + 1)));
-                this.draw(
-                    round(random(...count)),
-                    random(...size[0]),
-                    random(...size[1]),
-                    random(start, end)
-                );
-            }
-        }
+        const thisClass = this;
+        randomColumns(columns, order, function (start, end) {
+            const count = random(counts);
+            const size = random(sizes);
+            thisClass.draw(
+                round(random(...count)),
+                random(...size[0]),
+                random(...size[1]),
+                random(start, end)
+            );
+        });
     }
 
     draw(count, minSize, maxSize, xStart) {
         // Draw setup
         const color = randomBlue();
-        const weight = random(1, 1.5);
+        const weight = randomWeight();
         smooth();
         noFill();
         stroke(...color, 1);
         strokeWeight(weight);
 
         // Make bubbles
-        const spacing = max(1, random(-6, 6)); // Bias towards 1
+        const spacing = max(2, random(-6, 12)); // Bias towards 2
         let lastSize = maxSize;
-        let lastY = maxSize * random(0.5, 0.7);
+        let lastY = 0;
         for (let i = 0; i < count; i++) {
             noFill();
+
             const bubblesLeft = count - i;
             const allocatedDelta = (lastSize - minSize) / bubblesLeft;
             lastSize -= random(allocatedDelta * 0.75, allocatedDelta);
-            lastY -= lastSize + random(allocatedDelta * spacing * 0.75, allocatedDelta * spacing * 1.25);
-            circle(xStart + random(-lastSize, lastSize) / 2, height + lastY, lastSize);
+
+            const thisHeight = lastSize * random([1, 1, 1, 1.5, 1.75, 2]);
+            lastY -= thisHeight + random(allocatedDelta * spacing * 0.75, allocatedDelta * spacing * 1.25);
+            rect(xStart + random(-lastSize, lastSize) / 2, height + lastY, lastSize, thisHeight, lastSize / 2);
         }
 
         // TODO: some bubbles could have a cartoon shine line
@@ -373,70 +506,126 @@ class Bubbles {
 
 class Waves {
 
-    create() {
-        // Waves
-        let minWidth, maxWidth, waveHeight, waves;
-
-        // Small waves (top half)
-        minWidth = width * 0.1;
-        maxWidth = width * 0.2;
-        waveHeight = random(height * 0.02, height * 0.03);
-        waves = round(random(2, 5));
-        this.group(
-            minWidth,
-            maxWidth,
-            waveHeight,
-            random(4, 6),
-            waves,
-            random(0, width - maxWidth),
-            function () {
-                return random(width * -0.05, width * 0.05)
-            },
-            random(waveHeight * 2, height / 2 - 1.5 * waveHeight * waves)
-        );
-
-        // Big waves (bottom half)
-        minWidth = width * 0.4;
-        maxWidth = width * 0.6;
-        waveHeight = random(height * 0.04, height * 0.08);
-        waves = round(random(2, 3));
-        this.group(
-            minWidth,
-            maxWidth,
-            waveHeight,
-            random(2, 4),
-            waves,
-            random(0, width - maxWidth),
-            function () {
-                return random(width * -0.1, width * 0.1)
-            },
-            random(height / 2, height - 1.5 * waveHeight * waves)
-        );
+    horizontalY(topHalf, waveHeight, waves) {
+        if (topHalf) return random(waveHeight * 2, height / 2 - 1.5 * waveHeight * waves);
+        return random(height / 2, height - 1.5 * waveHeight * waves);
     }
 
-    group(minWidth, maxWidth, waveHeight, peaks, waves, xStart, xRandom, yStart) {
+    createSmallHorizontal(topHalf) {
+        // Small waves
+        const minWidth = width * 0.1;
+        const maxWidth = width * 0.2;
+        const waveHeight = random(height * 0.02, height * 0.03);
+        const peaks = random(4, 6);
+        const waves = round(random(2, 5));
+        const xRandom = () => random(width * -0.05, width * 0.05);
+        const x = random(0, width - maxWidth);
+        const y = this.horizontalY(topHalf, waveHeight, waves);
+
+        // Render
+        const group = this.group(
+            minWidth,
+            maxWidth,
+            waveHeight,
+            peaks,
+            waves,
+            xRandom
+        );
+        image(group, x, y, group.width, group.height, x, y, group.width, group.height);
+    }
+
+    createBigHorizontal(topHalf) {
+        // Big waves
+        const minWidth = width * 0.4;
+        const maxWidth = width * 0.6;
+        const waveHeight = random(height * 0.04, height * 0.08);
+        const peaks = random(2, 4);
+        const waves = round(random(2, 3));
+        const xRandom = () => random(width * -0.1, width * 0.1);
+        const x = random(0, width - maxWidth);
+        const y = this.horizontalY(topHalf, waveHeight, waves);
+
+        // Render
+        const group = this.group(
+            minWidth,
+            maxWidth,
+            waveHeight,
+            peaks,
+            waves,
+            xRandom
+        );
+        image(group, x, y, group.width, group.height, x, y, group.width, group.height);
+    }
+
+    createAllHorizontal(top) {
+        // Show a top wave
+        if (randomBool()) {
+            let wave = this.createSmallHorizontal;
+            if (top) wave = random([this.createBigHorizontal, this.createSmallHorizontal]);
+            wave.bind(this, true)();
+        }
+
+        // Show a bottom wave
+        if (top && randomBool()) {
+            const wave = random([this.createBigHorizontal, this.createSmallHorizontal]);
+            wave.bind(this, false)();
+        }
+    }
+
+    createVertical(x) {
+        const minHeight = height * 0.2;
+        const maxHeight = height * 0.5;
+        const waveWidth = random(width * 0.005, width * 0.015);
+        const peaks = random(2, 4);
+        const waves = round(random(2, 3));
+        const yRandom = () => 0;
+        const y = height - maxHeight;
+
+        // Render
+        const group = this.group(
+            minHeight,
+            maxHeight,
+            waveWidth,
+            peaks,
+            waves,
+            yRandom
+        );
+        const base = createGraphics(group.height, group.width, SVG);
+        base.rotate(-PI / 2);
+        base.image(group, 0, 0, group.width, group.height, -base.height, 0, group.width, group.height);
+        image(base, x, y, base.width, base.height, x, y, base.width, base.height);
+    }
+
+    createAllVertical(columns, order) {
+        const thisClass = this;
+        randomColumns(columns, order, function (start, end) {
+            thisClass.createVertical(random(start, end));
+        });
+    }
+
+    group(minWidth, maxWidth, waveHeight, peaks, waves, xRandom) {
+        const base = createGraphics(maxWidth, waveHeight * waves * 1.5, SVG);
         const period = ((minWidth + maxWidth) / 2) / peaks;
-        const color = 255 * random(0.7, 1);
-        const alpha = random(0.7, 1);
-        const weight = max(1, random(0.5, 3)); // Bias towards 1
+        const color = randomBlue();
+        const weight = randomWeight();
         for (let i = 0; i < waves; i++) {
             this.draw(
+                base,
                 period,
                 waveHeight / 2,
                 random(minWidth, maxWidth),
-                xStart + xRandom(),
-                yStart + i * waveHeight * 1.5,
+                xRandom(),
+                (waveHeight / 2 + i * waveHeight) * 1.5,
                 color,
-                alpha,
                 weight
             );
         }
-
+        return base;
         // TODO: A group of waves might have glow-y shadow
         // TODO: A group of waves might have drop shadow
     }
 
-    draw(period, amplitude, width, xStart, yStart, color, alpha, weight) {
+    draw(base, period, amplitude, width, xStart, yStart, color, weight) {
         // Generate
         const yvalues = [];
         let x = TWO_PI * (xStart / period);
@@ -446,14 +635,14 @@ class Waves {
         }
 
         // Draw
-        smooth();
-        noFill();
-        stroke(color, color, color, alpha);
-        strokeWeight(weight);
-        beginShape();
+        base.smooth();
+        base.noFill();
+        base.stroke(color);
+        base.strokeWeight(weight);
+        base.beginShape();
         for (let x = 0; x < yvalues.length; x++) {
-            curveVertex(x + xStart, yvalues[x] + yStart);
+            base.curveVertex(x + xStart, yvalues[x] + yStart);
         }
-        endShape();
+        base.endShape();
     }
 }

@@ -1,5 +1,6 @@
-div {
+div.p5Canvas {
     display: block !important;
+    border: 1px #000 solid;
 }
 
 button {
